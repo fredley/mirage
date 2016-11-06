@@ -1,0 +1,63 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <title>Mirage Blog</title>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="The Mirage Blogging Tool">
+  <meta name="author" content="Mirage">
+
+  <link href="https://fonts.googleapis.com/css?family=Gentium+Book+Basic|Open+Sans" rel="stylesheet">
+  <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+
+<!--[if lte IE 8]>
+  
+    <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-old-ie-min.css">
+  
+<![endif]-->
+<!--[if gt IE 8]><!-->
+  
+    <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-min.css">
+  
+<!--<![endif]-->
+
+  {{styles}}
+  <!--[if lt IE 9]>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.js"></script>
+  <![endif]-->
+</head>
+
+<body>
+<div id="layout" class="pure-g">
+  <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+      <h1 class="brand-title">{{title}}</h1>
+      <h2 class="brand-tagline">{{subtitle}}</h2>
+      <nav class="nav">
+        <ul class="nav-list">
+          {{pages}}
+        </ul>
+      </nav>
+    </div>
+  </div>
+  <div class="content pure-u-1 pure-u-md-3-4">
+  <div>
+    <div class="posts">
+      {{posts}}
+    </div>
+    <div class="footer">
+      <div class="pure-menu pure-menu-horizontal">
+        <ul>
+          <li class="pure-menu-item"><a href="" class="pure-menu-link">This blog was compiled by Mirage</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha256-/SIrNqv8h6QGKDuNoLGA4iret+kyesCkHGzVUUV0shc=" crossorigin="anonymous"></script>
+{{scripts}}
+</body>
+</html>

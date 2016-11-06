@@ -1,0 +1,228 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+
+import argh
+import shutil
+import os
+import time
+
+from markdown import markdown
+import uglipyjs
+from csscompressor import compress
+
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+from config import *
+
+def load_pages(directory):
+  for filename in os.listdir(directory):
+    page_filename = os.path.join(directory, filename)
+    with open(page_filename) as page_file:
+      split_filename = os.path.splitext(filename)
+      if len(split_filename) == 2 and split_filename[1] == ".md":
+        print("Compiling page " + filename)
+        new_filename = split_filename[0].lower().replace(" ","-")
+        content = markdown(page_file.read())
+        yield {
+          'filename': new_filename,
+          'url': new_filename,
+          'post-title': split_filename[0],
+          'content': content,
+          'date': time.ctime(os.path.getctime(page_filename))
+        }
+      else:
+        print("Ignoring page file " + filename)
+
+def load_posts(directory):
+  for filename in os.listdir(directory):
+    post_filename = os.path.join(directory, filename)
+    with open(post_filename) as post_file:
+      split_filename = os.path.splitext(filename)
+      if len(split_filename) == 2 and split_filename[1] == ".md":
+        print("Compiling post " + filename)
+        new_filename = split_filename[0].lower().replace(" ","-")
+        content = markdown(post_file.read())
+        yield {
+          'filename': new_filename,
+          'url': "posts/" + new_filename,
+          'post-title': split_filename[0],
+          'content': content,
+          'date': time.ctime(os.path.getctime(post_filename))
+        }
+      else:
+        print("Ignoring post file " + filename)
+
+def write_posts(base_dir, posts, templates):
+  for post in posts:
+    with open(os.path.join(base_dir, post['filename']), "w") as published:
+      print("Writing post " + post['filename'])
+      write_template(published, post, templates)
+
+def render_post(template, post):
+  return (template
+  .replace("{{content}}", post["content"])
+  .replace("{{permalink}}", post["url"])
+  .replace("{{post-title}}", post["post-title"])
+  .replace("{{post-date}}", post["date"]))
+
+def write_template(file, post, templates):
+  file.write(templates["base"].replace("{{posts}}", 
+    render_post(templates["post"], post)))
+
+def compile():
+  # Set up directory structure
+  project_root = os.path.dirname(os.path.dirname(__file__))
+  posts_dir = os.path.join(project_root, "posts")
+  pages_dir = os.path.join(project_root, "pages")
+  resources_dir = os.path.join(project_root, "resources")
+
+  build_dir = os.path.join(project_root, "build")
+  build_posts_dir = os.path.join(build_dir, "posts")
+  build_resources_dir = os.path.join(build_dir, "resources")
+
+  print("Compiling project in {}".format(project_root))
+  try:
+    shutil.rmtree(build_dir)
+  except:
+    pass
+  os.mkdir(build_dir)
+  os.mkdir(build_posts_dir)
+  os.mkdir(build_resources_dir)
+  os.mkdir(os.path.join(build_resources_dir,"css"))
+  os.mkdir(os.path.join(build_resources_dir,"js"))
+
+  # Check for required files
+  if not os.path.exists(os.path.join(project_root, "base.html")):
+    raise Exception("base.html not found")
+  if not os.path.exists(os.path.join(project_root, "post.html")):
+    raise Exception("post.html not found")
+
+  templates = {}
+
+  with open(os.path.join(project_root, "base.html")) as base_file:
+    templates["base"] = base_file.read()
+
+  with open(os.path.join(project_root, "post.html")) as post_file:
+    templates["post"] = post_file.read()
+
+  # Compile and minify resources
+  script_resources = []
+  style_resources = []
+
+  for root, dirs, files in os.walk(resources_dir):
+    for filename in files:
+      split_filename = os.path.splitext(filename)
+      if len(split_filename) == 2:
+        if split_filename[1] == ".js":
+          with open(os.path.join(root, filename)) as resource_file:
+              if split_filename[0][-4:] == ".min":
+                new_filename = filename
+              else:
+                new_filename = split_filename[0] + ".min.js"
+              script_resources.append(new_filename)
+              with open(os.path.join(build_resources_dir, "js", new_filename), 
+                "w") as published:
+                if split_filename[0][-4:] == ".min":
+                  print("Copying minified Javascript file " + filename)
+                  published.write(resource_file.read())
+                else:
+                  print("Minifying Javascript file " + filename)
+                  published.write(uglipyjs.compile(resource_file.read()))
+        elif split_filename[1] == ".css":
+          with open(os.path.join(root, filename)) as resource_file:
+              if split_filename[0][-4:] == ".min":
+                new_filename = filename
+              else:
+                new_filename = split_filename[0] + ".min.css"
+              style_resources.append(new_filename)
+              with open(os.path.join(build_resources_dir, "css", new_filename), 
+                "w") as published:
+                if split_filename[0][-4:] == ".min":
+                  print("Copying minified CSS file " + filename)
+                  published.write(resource_file.read())
+                else:
+                  print("Minifying CSS file " + filename)
+                  published.write(compress(resource_file.read()))
+        else:
+          print("Don't know what to do with file {}".format(filename))
+
+  # Generate style resources
+  style_headers = ''.join(['<link href="resources/css/{}" rel="stylesheet">'.format(name)
+   for name in style_resources])
+
+  # Generate script resources
+  script_headers = ''.join(['<script src="resources/js/{}"></script>'.format(name)
+   for name in script_resources])
+
+  # Update base template
+  templates["base"] = templates["base"].replace(
+    "{{styles}}", style_headers).replace(
+    "{{scripts}}", script_headers).replace(
+    "{{title}}", BLOG_TITLE).replace(
+    "{{subtitle}}", BLOG_SUBTITLE)
+
+  # Compile posts and pages
+
+  pages = list(load_pages(pages_dir))
+  posts = list(load_posts(posts_dir))
+
+  # update pages links on base template
+
+  pages_links = ''.join(['<li class="nav-item"><a class="pure-button" href="{}">{}</a></li>' \
+    .format(page["filename"], page["post-title"]) for page in pages])
+
+  templates["base"] = templates["base"].replace("{{pages}}", pages_links)
+
+  # write out pages files
+
+  write_posts(build_dir, pages, templates)
+
+  write_posts(build_posts_dir, posts, templates)
+
+  # Write out index file
+  with open(os.path.join(build_dir, "index.html"), "w") as index_file:
+    # Make a list of recent posts
+    # TODO order by date?
+    posts = ''.join([render_post(templates["post"], post) for post in posts])
+    index_file.write(templates["base"].replace("{{posts}}", posts))
+    print("Wrote index file")
+
+class ReloadHandler(FileSystemEventHandler):
+    def on_modified(self, event):
+      split_filename = os.path.splitext(event.src_path)
+      if event.src_path[:8] != "./build/" \
+        and len(split_filename) == 2 \
+        and split_filename[1][1:] in ["html", "css", "js", "md"]:
+        print("Source file {} changed, recompiling...".format(event.src_path))
+        try:
+          compile()
+        except Exception as e:
+          print("Something went wrong trying to compile: " + e)
+      else:
+        print("Ignoring file {}".format(event.src_path))
+
+def watch():
+  compile()
+  project_dir = os.path.dirname(__file__)
+  print("Watching for file changes in '{}'".format(project_dir))
+  observer = Observer()
+  observer.schedule(ReloadHandler(), project_dir, recursive=True)
+  observer.start()
+  try:
+    while True:
+      time.sleep(1)
+  except KeyboardInterrupt:
+    observer.stop()
+    print("Stopped watching for file changes in '{}'".format(project_dir))
+  observer.join()
+
+# CLI
+
+parser = argh.ArghParser()
+#todo deploy (S3)
+parser.add_commands([compile, watch])
+
+if __name__ == '__main__':
+  parser.dispatch()

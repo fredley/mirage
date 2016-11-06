@@ -1,0 +1,6 @@
+csscompressor==0.9.4
+future==0.16.0
+Markdown==2.6.
+PyExecJS==1.4.07
+UgliPyJS==0.2.5
+watchdog==0.8.3
