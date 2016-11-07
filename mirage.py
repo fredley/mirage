@@ -59,6 +59,14 @@ class cnsl:
   def error(msg):
     print(cnsl.FAIL, '✘', cnsl.ENDC, msg)
 
+def chunks(l, n):
+    """
+      Yield successive n-sized chunks from l. Used for pagination.
+      http://stackoverflow.com/a/312464/319618
+    """
+    for i in xrange(0, len(l), n):
+        yield l[i:i + n]
+
 def load_posts(directory, mode="post"):
   for filename in os.listdir(directory):
     post_filename = os.path.join(directory, filename)
@@ -66,11 +74,13 @@ def load_posts(directory, mode="post"):
       split_filename = os.path.splitext(filename)
       if len(split_filename) == 2 and split_filename[1] == ".md":
         cnsl.ok("Compiling {} {}".format(mode,filename))
-        new_filename = split_filename[0].lower().replace(" ","-")
+        post_slug = split_filename[0].lower().replace(" ","-")
+        new_filename = os.path.join(post_slug, "index.html")
+        url = "/" + os.path.join("posts", post_slug) if mode == "post" else "/" + post_slug
         content = markdown(post_file.read())
         yield {
           'filename': new_filename,
-          'url': new_filename,
+          'url': url,
           'post-title': split_filename[0],
           'content': content,
           'date': time.ctime(os.path.getctime(post_filename))
@@ -80,7 +90,9 @@ def load_posts(directory, mode="post"):
 
 def write_posts(base_dir, posts, templates):
   for post in posts:
-    with open(os.path.join(base_dir, post['filename']), "w") as published:
+    full_path = os.path.join(base_dir, post['filename'])
+    os.makedirs(os.path.split(full_path)[0])
+    with open(full_path, "w") as published:
       cnsl.success("Writing post " + post['filename'])
       write_template(published, post, templates)
 
@@ -92,8 +104,25 @@ def render_post(template, post):
   .replace("{{post-date}}", post["date"]))
 
 def write_template(file, post, templates):
-  file.write(templates["base"].replace("{{posts}}", 
-    render_post(templates["post"], post)))
+  file.write(templates["base"]
+    .replace("{{posts}}", render_post(templates["post"], post))
+    .replace("{{pagination}}",""))
+
+def page_url(n):
+  return "/" if n == 1 else "/" + str(n)
+
+def render_pages(total_pages, current_page):
+  if total_pages == 1:
+    return ''
+  pages_string = '<a href="{}">&lt; Newer</a> &bull; '.format(page_url(current_page - 1)) if current_page > 1 else '' 
+  for i in xrange(1,total_pages + 1):
+    if current_page == i:
+      pages_string += str(i) + " "
+    else:
+      pages_string += '<a href="{}">{}</a> '.format(page_url(i), i)
+
+  pages_string += ' &bull; <a href="{}">Older &gt;</a>'.format(page_url(current_page + 1)) if current_page < total_pages else ''
+  return pages_string
 
 def move_resource(file, filename, filetype, compile_function=lambda x: x):
   split_filename = os.path.splitext(filename)
@@ -165,11 +194,11 @@ def compile():
             cnsl.warn("Don't know what to do with file {}".format(filename))
 
   # Generate style resources
-  style_headers = ''.join(['<link href="resources/css/{}" rel="stylesheet">'.format(name)
+  style_headers = ''.join(['<link href="/resources/css/{}" rel="stylesheet">'.format(name)
    for name in resources["css"]])
 
   # Generate script resources
-  script_headers = ''.join(['<script src="resources/js/{}"></script>'.format(name)
+  script_headers = ''.join(['<script src="/resources/js/{}"></script>'.format(name)
    for name in resources["js"]])
 
   # Update base template
@@ -187,7 +216,7 @@ def compile():
   # update pages links on base template
 
   pages_links = ''.join(['<li class="nav-item"><a class="pure-button" href="{}">{}</a></li>' \
-    .format(page["filename"], page["post-title"]) for page in pages])
+    .format(page["url"], page["post-title"]) for page in pages])
 
   templates["base"] = templates["base"].replace("{{pages}}", pages_links)
 
@@ -197,14 +226,24 @@ def compile():
 
   write_posts(build_posts_dir, posts, templates)
 
-  # Write out index file
-  with open(os.path.join(build_dir, "index.html"), "w") as index_file:
-    # Make a list of recent posts
-    # TODO paginate if more than 10
-    posts.sort(key=lambda x: x["date"], reverse=True)
-    posts = ''.join([render_post(templates["post"], post) for post in posts[:10]])
-    index_file.write(templates["base"].replace("{{posts}}", posts))
+  # Make a list of recent posts
+  posts.sort(key=lambda x: x["date"], reverse=True)
+  cs = list(chunks(posts,10))
+  i = 1
+  for chunk in cs:
+    posts_chunk = ''.join([render_post(templates["post"], post) for post in chunk])
+    # Write out index file
+    if i == 1:
+      filename = "index.html"
+    else:
+      filename = os.path.join(str(i), "index.html")
+      os.makedirs(os.path.join(build_dir, str(i)))
+    with open(os.path.join(build_dir, filename), "w") as index_file:
+      index_file.write(templates["base"]
+        .replace("{{posts}}", posts_chunk)
+        .replace("{{pagination}}", render_pages(len(cs), i)))
     cnsl.success("Wrote index file")
+    i += 1
 
 class ReloadHandler(FileSystemEventHandler):
     def on_modified(self, event):

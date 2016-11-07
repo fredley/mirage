@@ -1,4 +1,4 @@
-![](resources/img/mirage.jpg)
+![](/resources/img/mirage.jpg)
 
 > *A Highway Mirage* by [Michael Gil on Flickr](https://flic.kr/p/a8Koki) - [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/)
 

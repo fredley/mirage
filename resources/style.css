@@ -1,9 +1,8 @@
 body{
-  background:#eee;
-  font-family: 'Gentium Book Basic', serif;
+    background:#eee;
 }
 h1, h2, h3, h4, h5, h6{
-  font-family: 'Open Sans', sans-serif;
+    font-family: 'Open Sans', sans-serif;
 }
 * {
     -webkit-box-sizing: border-box;
@@ -107,6 +106,7 @@ h3 {
 }
 .post {
     padding-bottom: 2em;
+    font-family: 'Gentium Book Basic', serif;
 }
 .post img {
     max-width: 100%;
@@ -122,6 +122,9 @@ h3 {
     color: #999;
     font-size: 90%;
     margin: 0;
+}
+.pagination {
+    text-align: center;
 }
 .footer {
     text-align: center;
