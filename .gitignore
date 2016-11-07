@@ -1,5 +1,8 @@
+credentials.csv
+config.py
+
 *.DS_Store
 *.pyc
 
-build/
+site/
 .env/

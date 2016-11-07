@@ -1,3 +1,4 @@
+boto==2.43.0
 csscompressor==0.9.4
 future==0.16.0
 Markdown==2.6.
