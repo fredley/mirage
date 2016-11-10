@@ -1,31 +1,32 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-from __future__ import print_function
 
 import argh
 import shutil
 import os
 import posixpath
-import SimpleHTTPServer
-import SocketServer
+import http.server
+import socketserver
 import threading
 import time
 import uglipyjs
-import urllib
+import urllib.request, urllib.parse, urllib.error
+import webbrowser
+import yaml
 
-from boto.s3 import connect_to_region
-from boto.s3.connection import OrdinaryCallingFormat
-from boto.s3.key import Key
 from csscompressor import compress
+from libcloud.storage.types import Provider, ContainerDoesNotExistError
+from libcloud.storage.providers import get_driver
 from markdown import markdown
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+from src.cnsl import cnsl
+
 try:
-  from config import *
-except:
-  pass
+  with open("config.yml") as config_yml:
+    config = yaml.load(config_yml.read())
+except Exception as e:
+  config = {}
 
 # Set up directory structure
 blog_root = os.path.dirname(__file__)
@@ -37,42 +38,12 @@ build_dir = os.path.join(blog_root, "site")
 build_posts_dir = os.path.join(build_dir, "posts")
 build_resources_dir = os.path.join(build_dir, "resources")
 
-
-class cnsl:
-  """
-  Utility class for formatting print statements
-  """
-  HEADER = '\033[95m'
-  OKBLUE = '\033[94m'
-  OKGREEN = '\033[92m'
-  WARNING = '\033[93m'
-  FAIL = '\033[91m'
-  ENDC = '\033[0m'
-  BOLD = '\033[1m'
-  UNDERLINE = '\033[4m'
-
-  @staticmethod
-  def success(msg):
-    print(cnsl.OKGREEN, '✔', cnsl.ENDC, msg)
-
-  @staticmethod
-  def ok(msg):
-    print(cnsl.OKBLUE, '>', cnsl.ENDC, msg)
-
-  @staticmethod
-  def warn(msg):
-    print(cnsl.WARNING, '!', cnsl.ENDC, msg)
-
-  @staticmethod
-  def error(msg):
-    print(cnsl.FAIL, '✘', cnsl.ENDC, msg)
-
 def chunks(l, n):
     """
       Yield successive n-sized chunks from l. Used for pagination.
       http://stackoverflow.com/a/312464/319618
     """
-    for i in xrange(0, len(l), n):
+    for i in range(0, len(l), n):
         yield l[i:i + n]
 
 def load_posts(directory, mode="post"):
@@ -123,7 +94,7 @@ def render_pages(total_pages, current_page):
   if total_pages == 1:
     return ''
   pages_string = '<a href="{}">&lt; Newer</a> &bull; '.format(page_url(current_page - 1)) if current_page > 1 else '' 
-  for i in xrange(1,total_pages + 1):
+  for i in range(1, total_pages + 1):
     if current_page == i:
       pages_string += str(i) + " "
     else:
@@ -138,7 +109,8 @@ def move_resource(file, filename, filetype, compile_function=lambda x: x):
     new_filename = filename
   else:
     new_filename = split_filename[0] + ".min." + filetype
-  with open(os.path.join(build_resources_dir, filetype, new_filename), "w") as published:
+  mode = "wb" if filetype == "js" else "w"
+  with open(os.path.join(build_resources_dir, filetype, new_filename), mode) as published:
     if split_filename[0][-4:] == ".min":
       cnsl.success("Copying minified {} file: {}".format(filetype, filename))
       published.write(file.read())
@@ -148,7 +120,7 @@ def move_resource(file, filename, filetype, compile_function=lambda x: x):
     return new_filename
 
 def move_image(file, filename):
-  with open(os.path.join(build_resources_dir, "img", filename), "w") as published:
+  with open(os.path.join(build_resources_dir, "img", filename), "wb") as published:
       cnsl.success("Copying image file: {}".format(filename))
       published.write(file.read())
 
@@ -194,15 +166,18 @@ def compile():
       split_filename = os.path.splitext(filename)
       ext = split_filename[1].lower()
       if len(split_filename) == 2:
-        with open(os.path.join(root, filename)) as resource_file:
-          if ext == ".js":
-            resources["js"].append(move_resource(resource_file, filename, "js", uglipyjs.compile))
-          elif ext == ".css":
-            resources["css"].append(move_resource(resource_file, filename, "css", compress))
-          elif ext[1:] in ["jpg", "jpeg", "png", "gif"]:
+        if ext[1:] in ["jpg", "jpeg", "png", "gif"]:
+          with open(os.path.join(root, filename), "rb") as resource_file:
             move_image(resource_file, filename)
-          else:
-            cnsl.warn("Don't know what to do with file {}".format(filename))
+        elif ext == ".css":
+          with open(os.path.join(root, filename), "r") as resource_file:
+            resources["css"].append(move_resource(resource_file, filename, "css", compress))
+        else:
+          with open(os.path.join(root, filename)) as resource_file:
+            if ext == ".js":
+              resources["js"].append(move_resource(resource_file, filename, "js", uglipyjs.compile))
+            else:
+              cnsl.warn("Don't know what to do with file {}".format(filename))
 
   # Generate style resources
   style_headers = ''.join(['<link href="/resources/css/{}" rel="stylesheet">'.format(name)
@@ -216,8 +191,8 @@ def compile():
   templates["base"] = templates["base"].replace(
     "{{styles}}", style_headers).replace(
     "{{scripts}}", script_headers).replace(
-    "{{title}}", BLOG_TITLE).replace(
-    "{{subtitle}}", BLOG_SUBTITLE)
+    "{{title}}", config["blog-title"]).replace(
+    "{{subtitle}}", config["blog-subtitle"])
 
   # Compile posts and pages
 
@@ -234,7 +209,6 @@ def compile():
   # write out pages files
 
   write_posts(build_dir, pages, templates)
-
   write_posts(build_posts_dir, posts, templates)
 
   # Make a list of recent posts
@@ -270,13 +244,13 @@ class ReloadHandler(FileSystemEventHandler):
       else:
         cnsl.warn("Ignoring change in file {}".format(event.src_path))
 
-class SiteHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+class SiteHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     def translate_path(self, path):
       """ This is an old-style class, so can't super :-( """
-      path = posixpath.normpath(urllib.unquote(path))
+      path = posixpath.normpath(urllib.parse.unquote(path))
       words = path.split('/')
-      words = filter(None, words)
+      words = [_f for _f in words if _f]
       path = "site"
       for word in words:
           drive, word = os.path.splitdrive(word)
@@ -289,88 +263,133 @@ class SiteHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 def watch():
   """
   Recompile the blog any time a file changes.
-
   """
   compile()
   cnsl.ok("Watching for file changes")
   observer = Observer()
   observer.schedule(ReloadHandler(), ".", recursive=True)
   observer.start()
-  httpd = SocketServer.TCPServer(("", 8000), SiteHTTPRequestHandler)
+  port = config.get("port", 8000)
+  httpd = socketserver.TCPServer(("", port), SiteHTTPRequestHandler)
   http = threading.Thread(target=httpd.serve_forever)
-  cnsl.ok("Starting webserver on port 8000")
+  cnsl.ok("Starting webserver on port {}".format(port))
   http.start()
+  webbrowser.open("http://localhost:{}/".format(port))
   try:
     while True:
       time.sleep(1)
   except KeyboardInterrupt:
     observer.stop()
     httpd.shutdown()
-    cnsl.ok("Stopped webserver on port 8000")
+    cnsl.ok("Stopped webserver on port {}".format(port))
     cnsl.ok("Stopped watching for file changes")
   http.join()
   observer.join()
 
-def deploy_s3():
+def deploy():
   """
-  Deploy your site to Amazon S3. 
-    You must have specified a bucket name and region in config.py,
-    and added your credentials.xml to the blog.
+  Deploy your site to a cloud service. 
+    You must have specified a service provider, container name, and access credentials in config.yml,
   """
   compile()
-  if not os.path.exists(os.path.join(blog_root, "credentials.csv")):
-    cnsl.error("You must add a credentials.csv from AWS to your blog.")
-    return
-  with open(os.path.join(blog_root, "credentials.csv")) as credentials_file:
-    credentials = credentials_file.read()
-  access_key = credentials.split("\n")[1].split(",")[1]
-  secret_key = credentials.split("\n")[1].split(",")[2]
+
   try:
-    s3 = connect_to_region(
-      aws_access_key_id=access_key, 
-      aws_secret_access_key=secret_key, 
-      region_name=AWS_REGION, 
-      calling_format=OrdinaryCallingFormat())
-    cnsl.success("Connected to S3")
+    service = config["deploy"]["service"]
   except:
-    cnsl.error("Could not connect to AWS, are your permissions set up ok?")
+    cnsl.error("You must specify a service to deploy to in config.yml")
     return
+
   try:
-    bucket = s3.get_bucket(S3_BUCKET)
-    cnsl.success("Loaded bucket {}".format(S3_BUCKET))
+    CloudFiles = get_driver(getattr(Provider, service))
   except:
-    cnsl.error("Could not load bucket {}, are your permissions set up ok?".format(S3_BUCKET))
+    cnsl.error("The storage provider config is not valid. The available providers are as follows:")
+    cnsl.error(', '.join([name for name in list(vars(Provider).keys()) if name[:2] != "__"]))
     return
+
+  try:
+    driver = CloudFiles(config["deploy"]["access-key"], config["deploy"]["secret-key"])
+  except Exception as e:
+    cnsl.error("Could not connect to storage service because: {}".format(e))
+    return
+
+  try:
+    container = driver.get_container(container_name=config["deploy"]["container-name"])
+    cnsl.success("Loaded container {} from {}".format(container.name, container.driver.name))
+  except ContainerDoesNotExistError:
+    cnsl.warn("Could not load container {}, trying to create it".format(container.name))
+    try:
+      container = driver.create_container(container_name=container)
+      cnsl.success("Created container {}".format(container.name))
+    except Exception as e:
+      cnsl.error("Could not create bucket because: {}".format(e))
+      return
+  except Exception as e:
+    cnsl.error("Could not load container {} because: {}".format(config["deploy"]["container-name"], e))
+    return
+
+  # These operations are supported by some providers, so try each in turn
+  try:
+    driver.ex_enable_static_website(container=container)
+    cnsl.success("Enabled static website hosting")
+  except:
+    cnsl.warn("Could not enable static website hosting, you may have to do this manually")
+
+  try:
+    driver.enable_container_cdn(container=container)
+    cnsl.success("Enabled cdn")
+  except:
+    cnsl.warn("Could not enable cdn, you may have to do this manually")
+
+  # TODO driver.ex_set_error_page(container=container, file_name='error.html')
+
   for root, dirs, files in os.walk(build_dir):
     for filename in files:
       full_filename = os.path.join(root, filename)
-      file_key = Key(bucket)
-      file_key.key = full_filename[5:] # Remove build/
-      file_key.set_contents_from_filename(full_filename, policy='public-read')
-      cnsl.success("Uploaded " + full_filename[5:])
-  cnsl.success("Site successfully uploaded to S3 bucket {}".format(S3_BUCKET))
+      # Remove deploy directory prefix
+      full_path = os.path.join(*full_filename.split(os.sep)[1:])
+      if "S3" in container.driver.name:
+        extra = {"acl": "public-read"}
+      else:
+        # TODO test with all other services
+        extra = {}
+      try:
+        driver.upload_object(
+          file_path=full_filename, 
+          container=container, 
+          extra=extra,
+          object_name=full_path)
+        cnsl.success("Uploaded " + full_path)
+      except Exception as e:
+        cnsl.error("Could not upload {}, because: {}".format(full_path, e))
+
+  cnsl.success("Site successfully uploaded to container {} on {}".format(container.name, container.driver.name))
+
+  try:
+    cnsl.ok('All done you can view the website at: ' + driver.get_container_cdn_url(container=container))
+  except:
+    pass
 
 def setup():
   """
-  Setup your config.py file interactively.
+  Setup your config.yml file interactively.
   """
-  if os.path.exists('config.py'):
+  if os.path.exists('config.yml'):
     cnsl.warn("Setting up blog, but config file already exists")
     cnsl.warn("Existing config will be overwritten, or ctrl+c to exit")
-  title = raw_input("\nPlease enter a title for your blog (you can change this later): \n")
-  subtitle = raw_input("\nPlease enter a subtitle for your blog: \n")
-  with open('config.sample.py') as sample_file:
+  title = input("\nPlease enter a title for your blog (you can change this later): \n")
+  subtitle = input("\nPlease enter a subtitle for your blog: \n")
+  with open('config.sample.yml') as sample_file:
     sample = sample_file.read()
   modified = ""
   for line in sample.split("\n"):
-    if line.startswith("BLOG_TITLE"):
-      modified += 'BLOG_TITLE = "{}"'.format(title.replace('\\',"\\\\").replace('"','\\"'))
-    elif line.startswith("BLOG_SUBTITLE"):
-      modified += 'BLOG_SUBTITLE = "{}"'.format(subtitle.replace('\\',"\\\\").replace('"','\\"'))
+    if line.startswith("blog-title"):
+      modified += 'blog-title: "{}"'.format(title.replace('\\',"\\\\").replace('"','\\"'))
+    elif line.startswith("blog-subtitle"):
+      modified += 'blog-subtitle: "{}"'.format(subtitle.replace('\\',"\\\\").replace('"','\\"'))
     else:
       modified += line
     modified += "\n"
-  with open('config.py', 'w') as config_file:
+  with open('config.yml', 'w') as config_file:
     config_file.write(modified)
   cnsl.success("Config file written")
   cnsl.ok("Welcome to Mirage. Write posts as markdown files in /posts.")
@@ -380,7 +399,7 @@ def setup():
 # CLI
 
 parser = argh.ArghParser()
-parser.add_commands([compile, watch, deploy_s3, setup])
+parser.add_commands([compile, watch, deploy, setup])
 
 if __name__ == '__main__':
   parser.dispatch()

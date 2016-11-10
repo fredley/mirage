@@ -10,7 +10,7 @@ With these installed, simply run `./setup`.
 
 ##Writing
 
-Before you start, modify your `config.py` file's blog title and subtitle. You don't need to worry about the other values unless you plan to deploy with S3.
+Before you start, modify your `config.yml` file's blog title and subtitle. You don't need to worry about the other values unless you plan to use the deploy functionality.
 
 To write posts, simply create Markdown files in the `posts` directory. To create pages (static pages like, e.g. `/about`), do the same in the pages directory.
 
@@ -20,8 +20,12 @@ When you're ready to publish, run `./mirage compile`. This will create a `site` 
 
 If you want to recompile the site whenever you change a file (e.g. if you are tweaking styles or javascript), run `./mirage watch`. 
 
-##Deploying your site with S3
+##Deploying your site
 
-If you have set up an S3 bucket, create an AWS IAM user (there is a sample IAM policy in the `doc` directory), and add its `credentials.csv` to the project root, and the bucket name in `config.py`. You may need to set your AWS region too, e.g. `us-east-1`. There is a [full list of region codes on Amazon](http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region) if you're not sure what it should be.
+Mirage can deploy to a number of cloud providers, including Amazon S3, Azure Blobs, Google Storage, and others.
 
-You can then run `./mirage deploy-s3` to push the site directly to the S3 bucket.
+You will need to get an access-key (or username) and a secret-key (or password) for your service, and add them to `config.yml`. You will also need to add the provider type, which may include a region. A full list of provider types supported is available [on libcloud](https://github.com/apache/libcloud/blob/trunk/libcloud/storage/providers.py). For some services, e.g. S3, you may need to select an appropriate provider for your region, e.g. `S3_EU_WEST`.
+
+You will also need to configure the container name. Mirage will try and create a container with this name if it does not exist already.
+
+You can then run `./mirage deploy` to push the site directly to the container. Additional configuration may be required to enable your service to be accessible as a static website, but Mirage will try and do it for you if possible.

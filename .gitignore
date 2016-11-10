@@ -1,5 +1,4 @@
-credentials.csv
-config.py
+config.yml
 
 *.DS_Store
 *.pyc

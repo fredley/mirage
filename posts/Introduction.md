@@ -4,6 +4,6 @@
 
 Welcome to the Mirage blogging engine. To write posts or pages, just create new Markdown files in the posts or pages folders.
 
-To build the blog, run `./mirage compile`, and to deploy it to S3, make sure you have a `credentials.xml` file in the project, then run `./mirage deploy-s3`.
+To build the blog, run `./mirage compile`, and to deploy it, make sure you have set up `config.yml` appropriately, then run `./mirage deploy`.
 
-You can recompile live on file changes with `./mirage watch`.
+You can recompile live on file changes with `./mirage watch`, which will also run a local server for you.

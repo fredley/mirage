@@ -1,0 +1,8 @@
+blog-title: "My Blog"
+blog-subtitle: "The best blog I've ever written"
+
+deploy:
+  service: "S3"
+  container-name: "mirage.example.com"
+  access-key: ""
+  secret- key: ""
