@@ -6,8 +6,13 @@ from __future__ import print_function
 import argh
 import shutil
 import os
+import posixpath
+import SimpleHTTPServer
+import SocketServer
+import threading
 import time
 import uglipyjs
+import urllib
 
 from boto.s3 import connect_to_region
 from boto.s3.connection import OrdinaryCallingFormat
@@ -17,15 +22,18 @@ from markdown import markdown
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-from config import *
+try:
+  from config import *
+except:
+  pass
 
 # Set up directory structure
-project_root = os.path.dirname(__file__)
-posts_dir = os.path.join(project_root, "posts")
-pages_dir = os.path.join(project_root, "pages")
-resources_dir = os.path.join(project_root, "resources")
+blog_root = os.path.dirname(__file__)
+posts_dir = os.path.join(blog_root, "posts")
+pages_dir = os.path.join(blog_root, "pages")
+resources_dir = os.path.join(blog_root, "resources")
 
-build_dir = os.path.join(project_root, "site")
+build_dir = os.path.join(blog_root, "site")
 build_posts_dir = os.path.join(build_dir, "posts")
 build_resources_dir = os.path.join(build_dir, "resources")
 
@@ -145,8 +153,11 @@ def move_image(file, filename):
       published.write(file.read())
 
 def compile():
+  """
+  Compile the blog, outputting the result into /site.
+  """
 
-  cnsl.ok("Compiling project")
+  cnsl.ok("Compiling blog")
   try:
     shutil.rmtree(build_dir)
   except:
@@ -160,9 +171,9 @@ def compile():
 
   templates = {}
 
-  for filename in os.listdir(os.path.join(project_root, "templates")):
+  for filename in os.listdir(os.path.join(blog_root, "templates")):
     split_filename = os.path.splitext(filename)
-    with open(os.path.join(project_root, "templates", filename)) as template_file:
+    with open(os.path.join(blog_root, "templates", filename)) as template_file:
       cnsl.ok("Loading template {}".format(filename))
       templates[split_filename[0]] = template_file.read()
 
@@ -259,26 +270,58 @@ class ReloadHandler(FileSystemEventHandler):
       else:
         cnsl.warn("Ignoring change in file {}".format(event.src_path))
 
+class SiteHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+
+    def translate_path(self, path):
+      """ This is an old-style class, so can't super :-( """
+      path = posixpath.normpath(urllib.unquote(path))
+      words = path.split('/')
+      words = filter(None, words)
+      path = "site"
+      for word in words:
+          drive, word = os.path.splitdrive(word)
+          head, word = os.path.split(word)
+          if word in (os.curdir, os.pardir):
+              continue
+          path = os.path.join(path, word)
+      return path
+
 def watch():
+  """
+  Recompile the blog any time a file changes.
+
+  """
   compile()
-  cnsl.ok("Watching for file changes\n")
+  cnsl.ok("Watching for file changes")
   observer = Observer()
   observer.schedule(ReloadHandler(), ".", recursive=True)
   observer.start()
+  httpd = SocketServer.TCPServer(("", 8000), SiteHTTPRequestHandler)
+  http = threading.Thread(target=httpd.serve_forever)
+  cnsl.ok("Starting webserver on port 8000")
+  http.start()
   try:
     while True:
       time.sleep(1)
   except KeyboardInterrupt:
     observer.stop()
+    httpd.shutdown()
+    cnsl.ok("Stopped webserver on port 8000")
     cnsl.ok("Stopped watching for file changes")
+  http.join()
   observer.join()
 
 def deploy_s3():
+  """
+  Deploy your site to Amazon S3. 
+    You must have specified a bucket name and region in config.py,
+    and added your credentials.xml to the blog.
+  """
   compile()
-  if not os.path.exists(os.path.join(project_root, "credentials.csv")):
-    cnsl.error("You must add a credentials.csv from AWS to your project.")
+  if not os.path.exists(os.path.join(blog_root, "credentials.csv")):
+    cnsl.error("You must add a credentials.csv from AWS to your blog.")
     return
-  with open(os.path.join(project_root, "credentials.csv")) as credentials_file:
+  with open(os.path.join(blog_root, "credentials.csv")) as credentials_file:
     credentials = credentials_file.read()
   access_key = credentials.split("\n")[1].split(",")[1]
   secret_key = credentials.split("\n")[1].split(",")[2]
@@ -307,12 +350,37 @@ def deploy_s3():
       cnsl.success("Uploaded " + full_filename[5:])
   cnsl.success("Site successfully uploaded to S3 bucket {}".format(S3_BUCKET))
 
+def setup():
+  """
+  Setup your config.py file interactively.
+  """
+  if os.path.exists('config.py'):
+    cnsl.warn("Setting up blog, but config file already exists")
+    cnsl.warn("Existing config will be overwritten, or ctrl+c to exit")
+  title = raw_input("\nPlease enter a title for your blog (you can change this later): \n")
+  subtitle = raw_input("\nPlease enter a subtitle for your blog: \n")
+  with open('config.sample.py') as sample_file:
+    sample = sample_file.read()
+  modified = ""
+  for line in sample.split("\n"):
+    if line.startswith("BLOG_TITLE"):
+      modified += 'BLOG_TITLE = "{}"'.format(title.replace('\\',"\\\\").replace('"','\\"'))
+    elif line.startswith("BLOG_SUBTITLE"):
+      modified += 'BLOG_SUBTITLE = "{}"'.format(subtitle.replace('\\',"\\\\").replace('"','\\"'))
+    else:
+      modified += line
+    modified += "\n"
+  with open('config.py', 'w') as config_file:
+    config_file.write(modified)
+  cnsl.success("Config file written")
+  cnsl.ok("Welcome to Mirage. Write posts as markdown files in /posts.")
+  cnsl.ok("Run ./mirage compile to compile your blog.")
+  cnsl.ok("Run ./mirage help for more information.")
 
 # CLI
 
 parser = argh.ArghParser()
-#todo deploy (S3)
-parser.add_commands([compile, watch, deploy_s3])
+parser.add_commands([compile, watch, deploy_s3, setup])
 
 if __name__ == '__main__':
   parser.dispatch()
