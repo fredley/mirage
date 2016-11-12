@@ -13,14 +13,14 @@
   <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
 
 <!--[if lte IE 8]>
-  
+
     <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-old-ie-min.css">
-  
+
 <![endif]-->
 <!--[if gt IE 8]><!-->
-  
+
     <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-min.css">
-  
+
 <!--<![endif]-->
 
   {{styles}}
@@ -31,19 +31,19 @@
 
 <body>
 <div id="layout" class="pure-g">
-  <div class="sidebar pure-u-1 pure-u-md-1-4">
-    <div class="header">
-      <h1 class="brand-title"><a href="/">{{title}}</a></h1>
-      <h2 class="brand-tagline">{{subtitle}}</h2>
-      <nav class="nav">
-        <ul class="nav-list">
-          {{pages}}
-        </ul>
-      </nav>
-    </div>
+  <div class="header pure-u-1">
+    <h1 class="brand-title"><a href="/">{{title}}</a></h1>
+    <h2 class="brand-tagline">{{subtitle}}</h2>
+    <nav class="page-list">
+      <ul class="page-list">
+        {{pages}}
+      </ul>
+    </nav>
   </div>
-  <div class="content pure-u-1 pure-u-md-3-4">
-  <div>
+</div>
+<div class="pure-g">
+  <div class="column pure-u-md-1-8 pure-u-1 pure-u-lg-1-6 pure-u-xl-1-5"></div>
+  <div class="content pure-u-md-3-4 pure-u-1 pure-u-lg-2-3 pure-u-xl-3-5">
     <div class="posts">
       {{posts}}
     </div>
@@ -58,7 +58,7 @@
       </div>
     </div>
   </div>
-  </div>
+  <div class="column pure-u-md-1-8 pure-u-1 pure-u-lg-1-6 pure-u-xl-1-5"></div>
 </div>
 <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha256-/SIrNqv8h6QGKDuNoLGA4iret+kyesCkHGzVUUV0shc=" crossorigin="anonymous"></script>
 {{scripts}}

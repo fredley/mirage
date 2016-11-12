@@ -122,7 +122,7 @@ def page_url(n):
 def render_pages(total_pages, current_page):
   if total_pages == 1:
     return ''
-  pages_string = '<a href="{}">&lt; Newer</a> &bull; '.format(page_url(current_page - 1)) if current_page > 1 else '' 
+  pages_string = '<a href="{}">&lt; Newer</a> &bull; '.format(page_url(current_page - 1)) if current_page > 1 else ''
   for i in xrange(1,total_pages + 1):
     if current_page == i:
       pages_string += str(i) + " "
@@ -226,7 +226,7 @@ def compile():
 
   # update pages links on base template
 
-  pages_links = ''.join(['<li class="nav-item"><a class="pure-button" href="{}">{}</a></li>' \
+  pages_links = ''.join(['<li class="page-link"><a class="pure-button" href="{}">{}</a></li>' \
     .format(page["url"], page["post-title"]) for page in pages])
 
   templates["base"] = templates["base"].replace("{{pages}}", pages_links)
@@ -298,6 +298,7 @@ def watch():
   observer.start()
   httpd = SocketServer.TCPServer(("", 8000), SiteHTTPRequestHandler)
   http = threading.Thread(target=httpd.serve_forever)
+  #TODO allow port reunse
   cnsl.ok("Starting webserver on port 8000")
   http.start()
   try:
@@ -313,7 +314,7 @@ def watch():
 
 def deploy_s3():
   """
-  Deploy your site to Amazon S3. 
+  Deploy your site to Amazon S3.
     You must have specified a bucket name and region in config.py,
     and added your credentials.xml to the blog.
   """
@@ -327,9 +328,9 @@ def deploy_s3():
   secret_key = credentials.split("\n")[1].split(",")[2]
   try:
     s3 = connect_to_region(
-      aws_access_key_id=access_key, 
-      aws_secret_access_key=secret_key, 
-      region_name=AWS_REGION, 
+      aws_access_key_id=access_key,
+      aws_secret_access_key=secret_key,
+      region_name=AWS_REGION,
       calling_format=OrdinaryCallingFormat())
     cnsl.success("Connected to S3")
   except:

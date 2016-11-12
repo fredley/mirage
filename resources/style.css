@@ -1,5 +1,5 @@
 body{
-    background:#eee;
+    background:#f3f5f7;
 }
 h1, h2, h3, h4, h5, h6{
     font-family: 'Open Sans', sans-serif;
@@ -12,45 +12,38 @@ h1, h2, h3, h4, h5, h6{
 
 a {
     text-decoration: none;
-    color: rgb(61, 146, 201);
+    color: #264a67;
 }
 a:hover,
 a:focus {
     text-decoration: underline;
 }
-
 blockquote {
     border-left: 5px solid #aaa;
     padding: 5px 15px;
     margin: 20px 0;
     background: rgba(0,0,0,0.05);
 }
-
-h3 {
-    font-weight: 100;
+pre{
+    background: #264a67;
+    color: #fff;
+    padding: 1.5em;
+    font-size: 0.9em;
+    line-height: 130%;
 }
-
-/* LAYOUT CSS */
 .pure-img-responsive {
     max-width: 100%;
     height: auto;
 }
-
 #layout {
     padding: 0;
 }
-
 .header {
     text-align: center;
-    top: auto;
-    margin: 3em auto;
-}
-
-.sidebar {
+    padding: 3em 0;
     background: rgb(61, 79, 93);
-    color: #fff;
+    color: #264a67;
 }
-
 .brand-title,
 .brand-tagline {
     margin: 0;
@@ -63,44 +56,32 @@ h3 {
 }
 .brand-tagline {
     font-weight: 300;
-    color: rgb(176, 202, 219);
+    color: #b7c3d0;
 }
-
-.nav-list {
+.page-list {
     margin: 0;
     padding: 0;
     list-style: none;
 }
-.nav-item {
+.page-link {
     display: inline-block;
     *display: inline;
     zoom: 1;
 }
-.nav-item a {
+.page-link a {
     background: transparent;
-    border: 2px solid rgb(176, 202, 219);
+    border: 2px solid #b7c3d0;
     color: #fff;
     margin-top: 1em;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     font-size: 85%;
 }
-.nav-item a:hover,
-.nav-item a:focus {
-    border: 2px solid rgb(61, 146, 201);
+.page-link a:hover,
+.page-link a:focus {
+    border: 2px solid #519bea;
     text-decoration: none;
 }
-
-.content-subhead {
-    text-transform: uppercase;
-    color: #aaa;
-    border-bottom: 1px solid #eee;
-    padding: 0.4em 0;
-    font-size: 80%;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-}
-
 .content {
     padding: 2em 1em 0;
 }
@@ -137,22 +118,4 @@ h3 {
 .footer .pure-menu a:hover,
 .footer .pure-menu a:focus {
     background: none;
-}
-
-@media (min-width: 48em) {
-    .content {
-        padding: 2em 3em 0;
-        margin-left: 25%;
-    }
-
-    .header {
-        margin: 80% 2em 0;
-        text-align: right;
-    }
-
-    .sidebar {
-        position: fixed;
-        top: 0;
-        bottom: 0;
-    }
 }
