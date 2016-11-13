@@ -1,6 +1,6 @@
 #Mirage
 
-Mirage is a simple blogging system that is 'serverless', similar to Jekyll. It will take Markdown files and build them into a site for you to deploy how you choose. It also has a built in mechanism to deploy to S3.
+Mirage is a simple blogging system that is 'serverless', similar to Jekyll. It will take Markdown files and build them into a site for you to deploy how you choose. It also has a built in mechanism to deploy to a variety of cloud storages, like an Amazon S3 bucket.
 
 ##Installation
 
@@ -21,6 +21,10 @@ When you're ready to publish, run `./mirage compile`. This will create a `site` 
 If you want to recompile the site whenever you change a file (e.g. if you are tweaking styles or javascript), run `./mirage watch`. 
 
 ##Deploying your site
+
+After compiling your site, the contents of the created `site` directory can be hosted anywhere. You can upload them to a webserver over FTP, or however you like.
+
+##Deploying your site to the cloud
 
 Mirage can deploy to a number of cloud providers, including Amazon S3, Azure Blobs, Google Storage, and others.
 

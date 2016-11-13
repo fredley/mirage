@@ -5,4 +5,4 @@ deploy:
   service: "S3"
   container-name: "mirage.example.com"
   access-key: ""
-  secret- key: ""
+  secret-key: ""
