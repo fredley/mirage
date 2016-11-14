@@ -93,7 +93,7 @@ def page_url(n):
 def render_pages(total_pages, current_page):
   if total_pages == 1:
     return ''
-  pages_string = '<a href="{}">&lt; Newer</a> &bull; '.format(page_url(current_page - 1)) if current_page > 1 else '' 
+  pages_string = '<a href="{}">&lt; Newer</a> &bull; '.format(page_url(current_page - 1)) if current_page > 1 else ''
   for i in range(1, total_pages + 1):
     if current_page == i:
       pages_string += str(i) + " "
@@ -201,7 +201,7 @@ def compile():
 
   # update pages links on base template
 
-  pages_links = ''.join(['<li class="nav-item"><a class="pure-button" href="{}">{}</a></li>' \
+  pages_links = ''.join(['<li class="page-link"><a class="pure-button" href="{}">{}</a></li>' \
     .format(page["url"], page["post-title"]) for page in pages])
 
   templates["base"] = templates["base"].replace("{{pages}}", pages_links)
