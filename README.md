@@ -14,6 +14,8 @@ Before you start, modify your `config.yml` file's blog title and subtitle. You d
 
 To write posts, simply create Markdown files in the `posts` directory. To create pages (static pages like, e.g. `/about`), do the same in the pages directory.
 
+If there's a post or page you want to work on but not publish, put `_draft` on the end of its filename, for example `Draft Test_draft.md`. These files will not be compiled.
+
 ##Creating your site
 
 When you're ready to publish, run `./mirage compile`. This will create a `site` directory, the contents of which you can put wherever you like. You can check it out locally by just opening `index.html`.

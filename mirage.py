@@ -9,9 +9,7 @@ import socketserver
 import threading
 import time
 import uglipyjs
-import urllib.request
-import urllib.parse
-import urllib.error
+import urllib.request, urllib.parse, urllib.error
 import webbrowser
 import yaml
 
@@ -56,6 +54,9 @@ def load_posts(directory, mode="post"):
     with open(post_filename) as post_file:
       split_filename = os.path.splitext(filename)
       if len(split_filename) == 2 and split_filename[1] == ".md":
+        if split_filename[1].endswith("_draft"):
+          cnsl.warn("Skipping draft file {}".format(filename))
+          continue
         cnsl.ok("Compiling {} {}".format(mode, filename))
         post_slug = split_filename[0].lower().replace(" ", "-")
         new_filename = os.path.join(post_slug, "index.html")
@@ -441,6 +442,8 @@ def setup():
 
 parser = argh.ArghParser()
 parser.add_commands([compile, watch, deploy, setup])
+# parser.set_default_command(compile)
 
 if __name__ == '__main__':
+  cnsl.header()
   parser.dispatch()

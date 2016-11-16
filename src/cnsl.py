@@ -2,18 +2,18 @@ class cnsl:
   """
   Utility class for formatting print statements
   """
-  HEADER = '\033[95m'
+  DEBUG = '\033[95m'
   OKBLUE = '\033[94m'
   OKGREEN = '\033[92m'
   WARNING = '\033[93m'
   FAIL = '\033[91m'
+  CYAN = '\033[0;36m'
+  LGREEN  = '\033[1;32m'
   ENDC = '\033[0m'
-  BOLD = '\033[1m'
-  UNDERLINE = '\033[4m'
 
   @staticmethod
   def debug(msg):
-    print(cnsl.HEADER, '$', cnsl.ENDC, msg)
+    print(cnsl.DEBUG, '$', cnsl.ENDC, msg)
 
   @staticmethod
   def success(msg):
@@ -30,3 +30,8 @@ class cnsl:
   @staticmethod
   def error(msg):
     print(cnsl.FAIL, '✘', cnsl.ENDC, msg)
+
+  @staticmethod
+  def header():
+    print("\n    ==" + cnsl.CYAN + "~~" + cnsl.ENDC + "== " + cnsl.LGREEN + 
+      "MIRAGE" + cnsl.ENDC + " ==" + cnsl.CYAN + "~~" + cnsl.ENDC + "==\n")

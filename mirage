@@ -3,10 +3,4 @@ if [ ! -f .env/bin/python ]; then
     echo "Mirage setup has not been run, running it now..."
     ./setup
 fi
-BGreen='\033[1;32m'
-Cyan='\033[0;36m'
-End='\033[0m'
-echo
-echo -e "    ==${Cyan}~~${End}== ${BGreen}MIRAGE${End} ==${Cyan}~~${End}=="
-echo
 .env/bin/python mirage.py "$@"
