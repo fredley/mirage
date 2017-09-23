@@ -1,14 +1,14 @@
-#Mirage
+# Mirage
 
 Mirage is a simple blogging system that is 'serverless', similar to Jekyll. It will take Markdown files and build them into a site for you to deploy how you choose. It also has a built in mechanism to deploy to a variety of cloud storages, like an Amazon S3 bucket.
 
-##Installation
+## Installation
 
 Make sure you have Python, with `pip` and `virtualenv` installed. If you don't, you can read instructions for installing [pip](https://packaging.python.org/installing/) and [virtualenv](https://virtualenv.pypa.io/en/stable/installation/) here.
 
 With these installed, simply run `./setup`.
 
-##Writing
+## Writing
 
 Before you start, modify your `config.yml` file's blog title and subtitle. You don't need to worry about the other values unless you plan to use the deploy functionality.
 
@@ -16,17 +16,17 @@ To write posts, simply create Markdown files in the `posts` directory. To create
 
 If there's a post or page you want to work on but not publish, put `_draft` on the end of its filename, for example `Draft Test_draft.md`. These files will not be compiled.
 
-##Creating your site
+## Creating your site
 
 When you're ready to publish, run `./mirage compile`. This will create a `site` directory, the contents of which you can put wherever you like. You can check it out locally by just opening `index.html`.
 
 If you want to recompile the site whenever you change a file (e.g. if you are tweaking styles or javascript), run `./mirage watch`. 
 
-##Deploying your site
+## Deploying your site
 
 After compiling your site, the contents of the created `site` directory can be hosted anywhere. You can upload them to a webserver over FTP, or however you like.
 
-##Deploying your site to the cloud
+## Deploying your site to the cloud
 
 Mirage can deploy to a number of cloud providers, including Amazon S3, Azure Blobs, Google Storage, and others.
 
