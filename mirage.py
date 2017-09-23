@@ -183,7 +183,12 @@ def compile():
       split_filename = os.path.splitext(filename)
       ext = split_filename[1].lower()
       if len(split_filename) == 2:
-        if ext[1:] in ["jpg", "jpeg", "png", "gif"]:
+        if ext[1:] == "ico":
+          with open(os.path.join(root, filename), "rb") as favicon:
+            with open(os.path.join(build_dir, filename), "wb") as published:
+              cnsl.success("Copying favicon file: {}".format(filename))
+              published.write(favicon.read())
+        elif ext[1:] in ["jpg", "jpeg", "png", "gif"]:
           with open(os.path.join(root, filename), "rb") as resource_file:
             move_image(resource_file, filename)
         elif ext == ".css":
@@ -231,7 +236,7 @@ def compile():
   write_posts(build_posts_dir, posts, templates)
 
   # Make a list of recent posts
-  posts.sort(key=lambda x: x["date"], reverse=True)
+  posts.sort(key=lambda x: x["date"])
   cs = list(chunks(posts, 10))
   i = 1
   for chunk in cs:
@@ -315,8 +320,8 @@ def watch():
 
 def deploy():
   """
-  Deploy your site to a cloud service. 
-  You must have specified a service provider, container name, 
+  Deploy your site to a cloud service.
+  You must have specified a service provider, container name,
   and access credentials in config.yml,
   """
   compile()
